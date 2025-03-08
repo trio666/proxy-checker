@@ -1,0 +1,47 @@
+name: Fetch and Save Proxies
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch-proxies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+
+      - name: Fetch and Save Proxies
+        run: |
+          # Ambil data dari ProxyScrape
+          curl -s "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text" > proxies.txt
+
+          # Ambil data dari Geonode
+          curl -s "https://proxylist.geonode.com/api/proxy-list?filterUpTime=90&limit=500&page=1&sort_by=lastChecked&sort_type=desc" | jq -r '.data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)"' >> proxies.txt
+
+          # Pisahkan berdasarkan jenis
+          grep '^http://' proxies.txt > http.txt || true
+          grep '^https://' proxies.txt > https.txt || true
+          grep '^socks4://' proxies.txt > socks4.txt || true
+          grep '^socks5://' proxies.txt > socks5.txt || true
+
+      - name: Commit and Push with Random Emoji
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          git config --global user.name "trio666"
+          git config --global user.email "github@triooo.co"
+          EMOJIS=("🚀" "🔥" "🌟" "💡" "🔧" "✅" "📌" "📈" "🕵️" "💾")
+          RANDOM_EMOJI=${EMOJIS[$RANDOM % ${#EMOJIS[@]}]}
+          git add http.txt https.txt socks4.txt socks5.txt
+          git commit -m "Update proxy lists $RANDOM_EMOJI" || echo "No changes to commit"
+          git push "https://x-access-token:${GH_PAT}@github.com/trio666/proxy-checker.git"
