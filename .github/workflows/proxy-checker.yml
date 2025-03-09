@@ -23,37 +23,33 @@ jobs:
       - name: Fetch and Save Proxies
         run: |
           set -e
+          SOURCES=(
+            "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text"
+            "https://proxylist.geonode.com/api/proxy-list?filterUpTime=90&limit=500&page=1&sort_by=lastChecked&sort_type=desc"
+            "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=json"
+            "https://www.911proxy.com/detection/proxyList?limit=500&page=1&sort_by=lastChecked&sort_type=desc&filterUpTime=90"
+            "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us"
+            "http://43.135.31.113:8777/proxyList?limit=500&page=1&uptime=90&language=en-us"
+          )
           > proxies.txt
-          fetch_proxies() {
-            url="$1"
-            parser="$2"
-            
-            if curl -s "$url" | jq -r "$parser" >> proxies.txt; then
-              echo "✅ Success: $url"
-            else
-              echo "⚠️ Failed: $url (skipping)"
+
+          for URL in "${SOURCES[@]}"; do
+            echo "Fetching: $URL"
+            RESPONSE=$(curl -s "$URL" || echo "ERROR")
+            if [[ "$RESPONSE" == "ERROR" ]]; then
+              echo "Skipping $URL due to error."
+              continue
             fi
-          }
-          
-          # ProxyScrape JSON
-          fetch_proxies "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=json" ".proxies[].proxy"
-          
-          # Geonode
-          fetch_proxies "https://proxylist.geonode.com/api/proxy-list?filterUpTime=90&limit=500&page=1&sort_by=lastChecked&sort_type=desc" ".data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)""
-          
-          # 911 Proxy
-          fetch_proxies "https://www.911proxy.com/detection/proxyList?limit=500&page=1&sort_by=lastChecked&sort_type=desc&filterUpTime=90" ".data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)""
-          
-          # LumiProxy
-          fetch_proxies "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" ".data.list[] | select(.protocol==8) | "socks5://\(.ip):\(.port)""
-          fetch_proxies "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" ".data.list[] | select(.protocol==4) | "socks4://\(.ip):\(.port)""
-          fetch_proxies "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" ".data.list[] | select(.protocol==2) | "https://\(.ip):\(.port)""
-          fetch_proxies "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" ".data.list[] | select(.protocol==1) | "http://\(.ip):\(.port)""
-          
-          # Proxy List
-          fetch_proxies "http://43.135.31.113:8777/proxyList?limit=500&page=1&uptime=90&language=en-us" ".data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)""
-          
-          # Pisahkan berdasarkan jenis
+            
+            if [[ "$URL" == *"format=text"* ]]; then
+              echo "$RESPONSE" >> proxies.txt
+            elif [[ "$URL" == *"lumiproxy"* ]]; then
+              echo "$RESPONSE" | jq -r '.data[] | select(.ip and .port and .protocol) | (.protocol | tonumber) as $proto | "\($proto | if . == 8 then \"socks5\" elif . == 4 then \"socks4\" elif . == 2 then \"https\" else \"http\" end)://\(.ip):\(.port)"' >> proxies.txt 2>/dev/null || true
+            else
+              echo "$RESPONSE" | jq -r '.data[] | select(.protocols) | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)"' >> proxies.txt 2>/dev/null || true
+            fi
+          done
+
           grep '^http://' proxies.txt > http.txt || true
           grep '^https://' proxies.txt > https.txt || true
           grep '^socks4://' proxies.txt > socks4.txt || true
