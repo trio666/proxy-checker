@@ -18,42 +18,44 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq curl
+          sudo apt-get install -y jq curl parallel
 
       - name: Fetch and Save Proxies
         run: |
-          # Ambil data dari ProxyScrape
-          curl -s "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text" > proxies.txt
+          mkdir -p proxies country
+          temp_file=$(mktemp)
 
-          # Ambil data dari Geonode
-          curl -s "https://proxylist.geonode.com/api/proxy-list?filterUpTime=90&limit=500&page=1&sort_by=lastChecked&sort_type=desc" | jq -r '.data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)"' >> proxies.txt
+          fetch_proxies() {
+            local url="$1"
+            local jq_filter="$2"
+            curl -s "$url" | jq -r "$jq_filter" | grep -E '^(http|https|socks4|socks5)://' >> "$temp_file" || true
+          }
 
-          # Ambil data dari 911Proxy
-          curl -s "https://www.911proxy.com/detection/proxyList?limit=500&page=1&sort_by=lastChecked&sort_type=desc&filterUpTime=90" | jq -r '.data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)"' >> proxies.txt
+          export -f fetch_proxies
 
-          # Ambil data dari LumiProxy
-          curl -s "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" | jq -r '.data.list[] | .protocol as $proto | if $proto == 8 then "socks5" elif $proto == 4 then "socks4" elif $proto == 2 then "https" else "http" end + "://\(.ip):\(.port)"' >> proxies.txt
+          parallel fetch_proxies ::: \
+            "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text" "cat" \
+            "https://proxylist.geonode.com/api/proxy-list?filterUpTime=90&limit=500&page=1&sort_by=lastChecked&sort_type=desc" \
+            ".data[] | .protocols[] as $proto | \"\($proto)://\(.ip):\(.port)\"" \
+            "https://www.911proxy.com/detection/proxyList?limit=500&page=1&sort_by=lastChecked&sort_type=desc&filterUpTime=90" \
+            ".data[] | .protocols[] as $proto | \"\($proto)://\(.ip):\(.port)\"" \
+            "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" \
+            ".data.list[] | \(.protocol | if . == 8 then \"socks5\" elif . == 4 then \"socks4\" elif . == 2 then \"https\" else \"http\" end) + \"://\(.ip):\(.port)\"" \
+            "http://43.135.31.113:8777/proxyList?limit=500&page=1&uptime=90&language=en-us" \
+            ".data[] | .protocols[] as $proto | \"\($proto)://\(.ip):\(.port)\""
 
-          # Ambil data dari IPRoyal
-          curl -s "http://43.135.31.113:8777/proxyList?limit=500&page=1&uptime=90&language=en-us" | jq -r '.data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)"' >> proxies.txt
+          sort -u "$temp_file" -o proxies.txt
+          rm "$temp_file"
 
-          # Hapus duplikat
-          sort -u proxies.txt -o proxies.txt
+          awk -F '://' '{print $2}' proxies.txt | awk -F ':' '{print $1}' | sort -u > unique_ips.txt
+          parallel -j10 'IP={} && COUNTRY=$(curl -s "https://ipinfo.io/$IP/country" || echo "UNKNOWN") && echo "$IP" >> "country/${COUNTRY}.txt"' :::: unique_ips.txt
+          rm unique_ips.txt
 
-          # Pisahkan berdasarkan jenis
-          grep '^http://' proxies.txt | sort -u > http.txt || true
-          grep '^https://' proxies.txt | sort -u > https.txt || true
-          grep '^socks4://' proxies.txt | sort -u > socks4.txt || true
-          grep '^socks5://' proxies.txt | sort -u > socks5.txt || true
+          grep '^http://' proxies.txt > http.txt || true
+          grep '^https://' proxies.txt > https.txt || true
+          grep '^socks4://' proxies.txt > socks4.txt || true
+          grep '^socks5://' proxies.txt > socks5.txt || true
           cp proxies.txt all.txt
-
-          # Pisahkan berdasarkan negara
-          mkdir -p country
-          while read line; do
-            IP=$(echo "$line" | awk -F '://' '{print $2}' | awk -F ':' '{print $1}')
-            COUNTRY=$(curl -s "https://ipinfo.io/$IP/country" || echo "UNKNOWN")
-            echo "$line" >> "country/${COUNTRY}.txt"
-          done < proxies.txt
 
       - name: Commit and Push with Random Emoji
         env:
