@@ -1,18 +1,33 @@
-# Free Proxy List
+### Free Proxy List  
 
 This repository provides an updated list of free proxies collected from various sources. The proxies are categorized by protocol:
 
-## Proxy Categories
+## 📌 Proxy Categories  
 
-- **HTTP Proxies**: Located in `http.txt`
-- **HTTPS Proxies**: Located in `https.txt`
-- **SOCKS4 Proxies**: Located in `socks4.txt`
-- **SOCKS5 Proxies**: Located in `socks5.txt`
+- **HTTP Proxies** → `http.txt`  
+- **HTTPS Proxies** → `https.txt`  
+- **SOCKS4 Proxies** → `socks4.txt`  
+- **SOCKS5 Proxies** → `socks5.txt`  
+- **All Proxies (Combined List)** → `all.txt`  
 
-## Update Frequency
+## 🔄 Update Frequency  
 
-The proxy list is updated every 30 minutes to ensure fresh and active proxies.
+The proxy list is updated every **10 minutes** to ensure fresh and active proxies.  
 
-## Usage
+## ✅ Proxy Status & Checking  
 
-You can download the proxy lists directly from the repository and use them for your projects.
+Collected proxies may vary in availability. It is recommended to verify them before use. You can use tools such as:  
+
+- `curl` (for HTTP/S)  
+- `proxychains` (for SOCKS4/SOCKS5)  
+- Python scripts using `requests` or `aiohttp`  
+
+Example check using `curl`:  
+
+```sh
+curl -x http://IP:PORT -I https://www.google.com
+```
+
+## ⚠️ Responsible Use  
+
+🛑 **Please follow** [GitHub Acceptable Use Policy](https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies). Use these proxies **responsibly**, without abuse, and without intent to engage in illegal activities.  
