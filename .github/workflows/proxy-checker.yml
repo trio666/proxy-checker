@@ -2,7 +2,7 @@ name: Fetch and Save Proxies
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -44,7 +44,7 @@ jobs:
             if [[ "$URL" == *"format=text"* ]]; then
               echo "$RESPONSE" >> proxies.txt
             elif [[ "$URL" == *"lumiproxy"* ]]; then
-              echo "$RESPONSE" | jq -r '.data.list[] | select(.ip and .port and .protocol) | (.protocol | tonumber) as $proto | "\($proto | if . == 8 then \"socks5\" elif . == 4 then \"socks4\" elif . == 2 then \"https\" else \"http\" end)://\(.ip):\(.port)"' >> proxies.txt 2>/dev/null || true
+              echo "$RESPONSE" | jq -r '.data.list[] | select(.ip and .port and .protocol) | (.protocol) as $proto | "\($proto | if . == 8 then \"socks5\" elif . == 4 then \"socks4\" elif . == 2 then \"https\" elif . == 1 then \"http\" else \"unknown\" end)://\(.ip):\(.port)"' >> proxies.txt 2>/dev/null || true
             else
               echo "$RESPONSE" | jq -r '.data[] | select(.protocols) | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)"' >> proxies.txt 2>/dev/null || true
             fi
@@ -65,6 +65,7 @@ jobs:
           git config --global user.email "github@triooo.co"
           EMOJIS=("🚀" "🔥" "🌟" "💡" "🔧" "✅" "📌" "📈" "🕵️" "💾")
           RANDOM_EMOJI=${EMOJIS[$RANDOM % ${#EMOJIS[@]}]}
+          TIMESTAMP=$(TZ=Asia/Jakarta date '+%H:%M %d/%m/%Y')
           git add http.txt https.txt socks4.txt socks5.txt all.txt
-          git commit -m "Update proxy lists $RANDOM_EMOJI" || echo "No changes to commit"
+          git commit -m "Update proxy lists - $TIMESTAMP $RANDOM_EMOJI" || echo "No changes to commit"
           git push "https://x-access-token:${GH_PAT}@github.com/trio666/proxy-checker.git"
