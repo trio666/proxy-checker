@@ -1,37 +1,72 @@
+name: Fetch and Save Proxies
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  fetch-proxies:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq curl
+
       - name: Fetch and Save Proxies
         run: |
-          # Bersihkan file sebelumnya
+          set -e
           > proxies.txt
-
-          # Fungsi untuk mengambil data dengan error handling
           fetch_proxies() {
             url="$1"
             parser="$2"
-
-            if curl -s "$url" | $parser >> proxies.txt; then
-              echo "✅ Fetched proxies from $url"
+            
+            if curl -s "$url" | jq -r "$parser" >> proxies.txt; then
+              echo "✅ Success: $url"
             else
-              echo "⚠️ Failed to fetch from $url, skipping..."
+              echo "⚠️ Failed: $url (skipping)"
             fi
           }
-
-          # Ambil data dari ProxyScrape
-          fetch_proxies "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text" "cat"
-
-          # Ambil data dari Geonode
-          fetch_proxies "https://proxylist.geonode.com/api/proxy-list?filterUpTime=90&limit=500&page=1&sort_by=lastChecked&sort_type=desc" "jq -r '.data[] | .protocols[] as \$proto | \"\(\$proto)://\(.ip):\(.port)\"'"
-
-          # Ambil data dari 911Proxy
-          fetch_proxies "https://www.911proxy.com/detection/proxyList?limit=500&page=1&sort_by=lastChecked&sort_type=desc&filterUpTime=90" "jq -r '.data[] | .protocols[] as \$proto | \"\(\$proto)://\(.ip):\(.port)\"'"
-
-          # Ambil data dari LumiProxy (ubah format protokol)
-          fetch_proxies "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" "jq -r '.data.list[] | .protocol as \$p | \"\((\$p == 8 and \"socks5\") // (\$p == 4 and \"socks4\") // (\$p == 2 and \"https\") // (\$p == 1 and \"http\"))://\(.ip):\(.port)\"'"
-
-          # Ambil data dari ProxyServer (43.135.31.113)
-          fetch_proxies "http://43.135.31.113:8777/proxyList?limit=500&page=1&uptime=90&language=en-us" "jq -r '.data[] | .protocols[] as \$proto | \"\(\$proto)://\(.ip):\(.port)\"'"
-
+          
+          # ProxyScrape JSON
+          fetch_proxies "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=json" ".proxies[].proxy"
+          
+          # Geonode
+          fetch_proxies "https://proxylist.geonode.com/api/proxy-list?filterUpTime=90&limit=500&page=1&sort_by=lastChecked&sort_type=desc" ".data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)""
+          
+          # 911 Proxy
+          fetch_proxies "https://www.911proxy.com/detection/proxyList?limit=500&page=1&sort_by=lastChecked&sort_type=desc&filterUpTime=90" ".data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)""
+          
+          # LumiProxy
+          fetch_proxies "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" ".data.list[] | select(.protocol==8) | "socks5://\(.ip):\(.port)""
+          fetch_proxies "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" ".data.list[] | select(.protocol==4) | "socks4://\(.ip):\(.port)""
+          fetch_proxies "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" ".data.list[] | select(.protocol==2) | "https://\(.ip):\(.port)""
+          fetch_proxies "https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us" ".data.list[] | select(.protocol==1) | "http://\(.ip):\(.port)""
+          
+          # Proxy List
+          fetch_proxies "http://43.135.31.113:8777/proxyList?limit=500&page=1&uptime=90&language=en-us" ".data[] | .protocols[] as $proto | "\($proto)://\(.ip):\(.port)""
+          
           # Pisahkan berdasarkan jenis
           grep '^http://' proxies.txt > http.txt || true
           grep '^https://' proxies.txt > https.txt || true
           grep '^socks4://' proxies.txt > socks4.txt || true
           grep '^socks5://' proxies.txt > socks5.txt || true
+
+      - name: Commit and Push with Random Emoji
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          git config --global user.name "trio666"
+          git config --global user.email "github@triooo.co"
+          EMOJIS=("🚀" "🔥" "🌟" "💡" "🔧" "✅" "📌" "📈" "🕵️" "💾")
+          RANDOM_EMOJI=${EMOJIS[$RANDOM % ${#EMOJIS[@]}]}
+          git add http.txt https.txt socks4.txt socks5.txt
+          git commit -m "Update proxy lists $RANDOM_EMOJI" || echo "No changes to commit"
+          git push "https://x-access-token:${GH_PAT}@github.com/trio666/proxy-checker.git"
