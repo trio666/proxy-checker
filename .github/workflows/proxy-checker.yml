@@ -37,4 +37,5 @@ jobs:
         TIMESTAMP=$(TZ=Asia/Jakarta date '+%H:%M %d/%m/%Y')
         git add http.txt https.txt socks4.txt socks5.txt all.txt country/
         git commit -m "Update proxy lists - $TIMESTAMP $RANDOM_EMOJI" || echo "No changes to commit"
+        git pull --rebase "https://x-access-token:${GH_PAT}@github.com/trio666/proxy-checker.git" main
         git push "https://x-access-token:${GH_PAT}@github.com/trio666/proxy-checker.git"
