@@ -56,7 +56,8 @@ const fetchProxies = async () => {
 };
 
 const writeProxiesToFile = (proxies, filename) => {
-    fs.writeFileSync(filename, proxies.join('\n'), 'utf8');
+    const uniqueProxies = [...new Set(proxies)].sort();
+    fs.writeFileSync(filename, uniqueProxies.join('\n'), 'utf8');
 };
 
 const categorizeAndWriteProxies = (proxies) => {
