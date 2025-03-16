@@ -13,8 +13,8 @@ This repository provides an updated list of free proxies collected from various 
 ### 🌍 Country-Specific Proxies  
 
 Proxies are also categorized by country. You can find country-specific proxy lists in the `country` directory. For example:
-- **United States** → `country/US/all.txt`, `country/US/http.txt`, `country/US/https.txt`, `country/US/socks4.txt`, `country/US/socks5.txt`
-- **Germany** → `country/DE/all.txt`, `country/DE/http.txt`, `country/DE/https.txt`, `country/DE/socks4.txt`, `country/DE/socks5.txt`
+- **United States** → `country/US/all.txt`
+- **Germany** → `country/DE/all.txt`
 
 ### 🔄 Update Frequency  
 
