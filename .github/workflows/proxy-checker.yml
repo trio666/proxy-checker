@@ -22,9 +22,11 @@ jobs:
 
     - name: Install dependencies
       run: npm install
+      working-directory: .github/workflows
 
     - name: Run app.js
       run: node app.js
+      working-directory: .github/workflows
 
     - name: Commit and Push with Random Emoji
       env:
