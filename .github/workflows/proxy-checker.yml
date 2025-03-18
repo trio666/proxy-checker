@@ -35,7 +35,8 @@ jobs:
         mv .github/workflows/https.txt .
         mv .github/workflows/socks4.txt .
         mv .github/workflows/socks5.txt .
-        mv .github/workflows/country/* country/ || true
+        rsync -a .github/workflows/country/ country/
+        rm -rf .github/workflows/country/*
 
     - name: Commit and Push with Random Emoji
       env:
