@@ -28,6 +28,15 @@ jobs:
       run: node app.js
       working-directory: .github/workflows
 
+    - name: Move updated files to root directory
+      run: |
+        mv .github/workflows/all.txt .
+        mv .github/workflows/http.txt .
+        mv .github/workflows/https.txt .
+        mv .github/workflows/socks4.txt .
+        mv .github/workflows/socks5.txt .
+        mv .github/workflows/country/* country/ || true
+
     - name: Commit and Push with Random Emoji
       env:
         GH_PAT: ${{ secrets.GH_PAT }}
@@ -37,7 +46,7 @@ jobs:
         EMOJIS=("🛡️" "🔒" "🌐" "💻" "📡" "🔍" "🖥️" "📊" "📈" "🗂️" "🚀" "🔥")
         RANDOM_EMOJI=${EMOJIS[$RANDOM % ${#EMOJIS[@]}]}
         TIMESTAMP=$(TZ=Asia/Jakarta date '+%H:%M %d/%m/%Y')
-        git add http.txt https.txt socks4.txt socks5.txt all.txt country/
+        git add all.txt http.txt https.txt socks4.txt socks5.txt country/
         git commit -m "Update proxy lists - $TIMESTAMP $RANDOM_EMOJI" || echo "No changes to commit"
         git pull --rebase "https://x-access-token:${GH_PAT}@github.com/trio666/proxy-checker.git" main
         git push "https://x-access-token:${GH_PAT}@github.com/trio666/proxy-checker.git"
