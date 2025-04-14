@@ -5,10 +5,10 @@ const url = require('url');
 
 const urls = [
     'https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=json',
-    'https://proxylist.geonode.com/api/proxy-list?filterUpTime=90&limit=500&page=1&sort_by=lastChecked&sort_type=desc',
-    'https://www.911proxy.com/detection/proxyList?limit=500&page=1&sort_by=lastChecked&sort_type=desc&filterUpTime=90',
-    'http://43.135.31.113:8777/proxyList?limit=500&page=1&uptime=90&language=en-us',
-    'https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=90&language=en-us'
+    'https://proxylist.geonode.com/api/proxy-list?filterUpTime=80&limit=500&page=1&sort_by=lastChecked&sort_type=desc',
+    'https://www.911proxy.com/detection/proxyList?limit=500&page=1&sort_by=lastChecked&sort_type=desc&filterUpTime=80',
+    'http://43.135.31.113:8777/proxyList?limit=500&page=1&uptime=80&language=en-us',
+    'https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=80&language=en-us'
 ];
 
 const protocolMap = {
