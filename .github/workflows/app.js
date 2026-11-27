@@ -11,6 +11,26 @@ const urls = [
     'https://api.lumiproxy.com/web_v1/free-proxy/list?page_size=500&page=1&uptime=80&language=en-us'
 ];
 
+// Plain-text proxy lists (one "IP:port" per line, protocol from the file).
+// All URLs verified live 2026-11-27. Skipped: mmpx12 (serves a 502 error
+// inside its file) and proxy-list.download (API returns 502).
+// Note: the API sources above are already fully harvested on page 1
+// (Geonode total 306, LumiProxy total 386 with uptime>=80), so pagination
+// adds nothing — volume comes from these text lists instead.
+const textLists = [
+    { url: 'https://openproxylist.xyz/http.txt', protocol: 'http' },
+    { url: 'https://openproxylist.xyz/https.txt', protocol: 'https' },
+    { url: 'https://openproxylist.xyz/socks4.txt', protocol: 'socks4' },
+    { url: 'https://openproxylist.xyz/socks5.txt', protocol: 'socks5' },
+    { url: 'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt', protocol: 'http' },
+    { url: 'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt', protocol: 'socks4' },
+    { url: 'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt', protocol: 'socks5' },
+    { url: 'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt', protocol: 'http' },
+    { url: 'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks4.txt', protocol: 'socks4' },
+    { url: 'https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/socks5.txt', protocol: 'socks5' },
+    { url: 'https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt', protocol: 'socks5' }
+];
+
 const protocolMap = {
     1: 'http',
     2: 'https',
@@ -50,6 +70,23 @@ const fetchProxies = async () => {
             }
         } catch (error) {
             console.error(`Error fetching proxies from ${urlString}:`, error);
+        }
+    }
+    for (const { url: listUrl, protocol } of textLists) {
+        try {
+            console.log(`Fetching proxies from ${listUrl}...`);
+            const response = await axios.get(listUrl, { responseType: 'text' });
+            const text = typeof response.data === 'string' ? response.data : '';
+            for (const line of text.split('\n')) {
+                const trimmed = line.trim();
+                if (!trimmed) continue;
+                const match = trimmed.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(\d{1,5})$/);
+                if (match) {
+                    allProxies.push({ protocol, ip: match[1], port: match[2], country: 'Unknown' });
+                }
+            }
+        } catch (error) {
+            console.error(`Error fetching proxies from ${listUrl}:`, error);
         }
     }
     return allProxies;
